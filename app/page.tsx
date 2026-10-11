@@ -1,69 +1,225 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
+import dynamic from "next/dynamic";
+
+const Map = dynamic(() => import("./components/Map"), { ssr: false });
+
+export default function HomePage() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [driverFound, setDriverFound] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        window.location.href = "/login";
+      } else {
+        setUser(data.user);
+      }
+      setLoading(false);
+    };
+    checkUser();
+  }, []);
+
+  const calculatePrice = () => {
+    if (!from || !to) {
+      alert("Алдымен мекенжайларды толтырыңыз!");
+      return;
+    }
+    const randomPrice = Math.floor(Math.random() * 1500) + 500;
+    setPrice(randomPrice);
+  };
+
+  const handleOrder = () => {
+    if (!from || !to || !price) {
+      alert("Алдымен мекенжайларды толтырып, бағаны есептеңіз!");
+      return;
+    }
+    setDriverFound(true);
+    setTimeout(() => {
+      alert(`✅ Жүргізуші табылды!\n\nҚайдан: ${from}\nҚайда: ${to}\nБағасы: ${price} ₸`);
+    }, 2000);
+  };
+
+  if (loading) return <p style={{ padding: 40, color: "#fff", background: "#111", minHeight: "100vh" }}>Жүктелуде...</p>;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div style={styles.container}>
+      <div style={styles.mapContainer}>
+       <Map from={from} to={to} />
+      
+      </div>
+
+      <div style={styles.panel}>
+        <h2 style={styles.panelTitle}>🚕 Қайда барасыз?</h2>
+
+        <input
+          type="text"
+          placeholder="📍 Қайдан (мекенжай)"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          style={styles.input}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <input
+          type="text"
+          placeholder="🎯 Қайда (мекенжай)"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          style={styles.input}
+        />
+
+        <button onClick={calculatePrice} style={styles.calcBtn}>
+          Бағаны есептеу
+        </button>
+
+        {price && (
+          <div style={styles.priceBox}>
+            <span style={styles.priceLabel}>Бағасы:</span>
+            <span style={styles.priceValue}>{price} ₸</span>
+          </div>
+        )}
+
+        <button onClick={handleOrder} style={styles.orderBtn}>
+          {driverFound ? "🔍 Жүргізуші ізделуде..." : "🚕 Такси шақыру"}
+        </button>
+      </div>
+
+      <div style={styles.bottomNav}>
+        <a href="/" style={styles.navItemActive}>
+          <span style={styles.navIcon}>🏠</span>
+          <span style={styles.navText}>Басты</span>
+        </a>
+        <a href="/profile" style={styles.navItem}>
+          <span style={styles.navIcon}>👤</span>
+          <span style={styles.navText}>Профиль</span>
+        </a>
+      </div>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: "100vh",
+    background: "#111",
+    color: "#fff",
+    fontFamily: "'Segoe UI', sans-serif",
+    paddingBottom: 80,
+    position: "relative" as const,
+  },
+  mapContainer: {
+    height: "45vh",
+    width: "100%",
+    background: "#222",
+    position: "relative" as const,
+  },
+  panel: {
+    background: "#111",
+    padding: "20px 25px 30px",
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    marginTop: -20,
+    position: "relative" as const,
+    zIndex: 10,
+  },
+  panelTitle: {
+    color: "#FFD700",
+    fontSize: 20,
+    marginTop: 0,
+    marginBottom: 15,
+  },
+  input: {
+    width: "100%",
+    padding: "14px 16px",
+    marginBottom: 12,
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,215,0,0.3)",
+    borderRadius: 12,
+    color: "#fff",
+    fontSize: 15,
+    outline: "none",
+    boxSizing: "border-box" as const,
+  },
+  calcBtn: {
+    width: "100%",
+    padding: "12px",
+    background: "transparent",
+    color: "#FFD700",
+    border: "1px solid #FFD700",
+    borderRadius: 12,
+    fontSize: 15,
+    fontWeight: "600" as const,
+    cursor: "pointer",
+    marginBottom: 12,
+  },
+  priceBox: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "14px 20px",
+    background: "rgba(255,215,0,0.1)",
+    border: "1px solid rgba(255,215,0,0.3)",
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  priceLabel: {
+    color: "#aaa",
+    fontSize: 14,
+  },
+  priceValue: {
+    color: "#FFD700",
+    fontSize: 22,
+    fontWeight: "700" as const,
+  },
+  orderBtn: {
+    width: "100%",
+    padding: "16px",
+    background: "#FFD700",
+    color: "#000",
+    border: "none",
+    borderRadius: 12,
+    fontSize: 17,
+    fontWeight: "700" as const,
+    cursor: "pointer",
+  },
+  bottomNav: {
+    position: "fixed" as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: "rgba(20, 20, 20, 0.98)",
+    borderTop: "1px solid rgba(255,215,0,0.3)",
+    display: "flex",
+    justifyContent: "space-around",
+    padding: "12px 0",
+    zIndex: 100,
+  },
+  navItem: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    color: "#888",
+    textDecoration: "none",
+    gap: 4,
+    padding: "5px 20px",
+  },
+  navItemActive: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    color: "#FFD700",
+    textDecoration: "none",
+    gap: 4,
+    padding: "5px 20px",
+  },
+  navIcon: { fontSize: 22 },
+  navText: { fontSize: 11, fontWeight: "600" as const },
+};
